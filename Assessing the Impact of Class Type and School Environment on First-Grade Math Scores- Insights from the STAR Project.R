@@ -18,7 +18,7 @@ library(cowplot)
 library(DT)
 library(lme4)
 library(lmerTest)
-# data preparation
+# Import data and select relative columns
 data <- read_sav("dataverse_files/STAR_Students.sav")
 which(colnames(data) == "g1schid")
 which(colnames(data) == "g1selfconcraw")
@@ -28,10 +28,12 @@ grade_1$g1classtype <- data$g1classtype
 # First of all, we divide the student into two part: involved in STAR or not, based on 'FLAGSG1'
 star_not_involved <- grade_1 %>% filter(FLAGSG1 == 0)
 star_involved <- grade_1 %>% filter(FLAGSG1 == 1)
-# remove student id and FLAGSG1
+
+# Remove student id and FLAGSG1
 star_involved <- star_involved %>% dplyr::select(-FLAGSG1)
 star_involved <- star_involved %>% dplyr::select(-stdntid)
-# Variable preparation
+
+# Categorical variable preparation
 star_involved$race <- as.factor(star_involved$race)
 star_involved$gender <- as.factor(star_involved$gender)
 star_involved$g1freelunch <- as.factor(star_involved$g1freelunch)
@@ -43,6 +45,7 @@ star_involved$g1tcareer <- as.factor(star_involved$g1tcareer)
 star_involved$g1classtype <- as.factor(star_involved$g1classtype)
 star_involved$g1schid <- as.factor(star_involved$g1schid)
 
+# Categories rename
 star_involved$race <- factor(star_involved$race, levels = c("1", "2", "3", "4", "5", "6"), labels = c("White", "Black","Asian","Hispanic","Native American", "Other"))
 star_involved$gender <- factor(star_involved$gender, levels = c("1", "2"), labels = c("Male", "Female"))
 star_involved$g1surban <- factor(star_involved$g1surban, levels = c("1", "2", "3", "4"), labels = c("Inner City", "Suburban", "Rural", "Urban"))
@@ -85,7 +88,7 @@ star_involved_log$g1classtype <- as.factor(star_involved_log$g1classtype)
 missing_model <- glm(g1tmathss_missing ~ race + gender + g1freelunch + g1surban + g1tgen + g1thighdegree + g1trace + g1tcareer+ g1classtype, 
                      data = star_involved_log, family = "binomial")
 summary(missing_model)
-# Little test
+# Little test for MCAR
 little_test_subset <- star_involved %>%
   dplyr::select(g1tmathss, g1freelunch, g1mathbsobjpct,g1mathbsobjraw,g1mathbsraw,g1tmathss, g1promote,g1absent,g1present)
 naniar::mcar_test(little_test_subset)
@@ -108,6 +111,7 @@ predicted_values <- predict(model, newdata = missing_data)
 regression_imputed$g1tmathss[is.na(regression_imputed$g1tmathss)] <- predicted_values
 sum(is.na(regression_imputed$g1tmathss))
 sum(is.na(math_score_involved$g1tmathss))
+# Missing value pattern
 gg_miss_upset(regression_imputed_data, nsets = 10, nintersects = 10)
 # Hetrogenity analysis
 grade_1$FLAGSG1 <- factor(grade_1$FLAGSG1, labels = c("Students not-involved in STAR", "Students involved in STAR"))
@@ -124,7 +128,7 @@ race_distribution$race <- as.character(race_distribution$race)
 race_distribution$race <- ifelse(race_distribution$race %in% c("Asian", "Hispanic", "Native American", "Other"), "Others", race_distribution$race)
 race_distribution$race <- factor(race_distribution$race)
 
-# Recalculate proportions after combining races
+# calculate proportions after combining races
 race_distribution <- race_distribution %>%
   group_by(FLAGSG1, race) %>%
   summarise(Count = sum(Count), .groups = 'drop') %>%
@@ -132,7 +136,7 @@ race_distribution <- race_distribution %>%
   mutate(Proportion = Count / sum(Count)) %>%
   ungroup()
 
-# STAR data plot
+# STAR data pie chart (involved and non-involved)
 star_race_plot <- ggplot(race_distribution, aes(x = "", y = Proportion, fill = race)) +
   geom_bar(width = 1, stat = "identity") +
   coord_polar(theta = "y") +
@@ -143,14 +147,12 @@ star_race_plot <- ggplot(race_distribution, aes(x = "", y = Proportion, fill = r
   theme(plot.title = element_text(hjust = 0.5)) +
   scale_fill_manual(values = c("White" = "#F8766D", "Black" = "#00BA38", "Others" = "#619CFF"))
 
-# National reference plot
-
+# National reference pie chart
 racial_composition <- data.frame(
   race = c("White", "Black", "Others"),
   percentage = c(77, 12, 8 + 2 + 0.6 + 0.2)  # Combine percentages for non-White and non-Black
 )
 
-# National reference plot with embedded color definition
 national_race_plot <- ggplot(racial_composition, aes(x = "", y = percentage, fill = race)) +
   geom_bar(width = 1, stat = "identity") +
   coord_polar(theta = "y") +
@@ -203,7 +205,7 @@ descriptive_stats <- star_involved %>%
               round(sum(is.na(g1tmathss)), 2))
   )
 
-# Create table
+# statistics table
 descriptive_stats_table <- gt(descriptive_stats) %>%
   tab_header(
     title = md("**Descriptive Statistics for First Grade Math Scores (SATs)**")
@@ -223,7 +225,7 @@ descriptive_stats_table <- gt(descriptive_stats) %>%
   ) 
 
 descriptive_stats_table
-# explore the math score distribution
+# explore the 4 math scores distribution by hist plot with density line
 p1 <- ggplot(data = star_involved, aes(x = g1mathbsraw)) +
   geom_histogram(aes(y = ..density..), binwidth = 3, fill = "lightgrey") +
   geom_density(color = "skyblue", size = 0.5) +
@@ -253,12 +255,14 @@ combined_plots <- p1 + p2 + p3 + p4 +
   plot_layout(ncol = 2)
 
 print(combined_plots)
+# Check math score normality from q-q plot 
 ggplot(data = star_involved, aes(sample = g1tmathss)) +
   stat_qq() +
   stat_qq_line() +
   ggtitle("Q-Q Plot of math scores g1tmathss vs. Normal Distribution") +
   xlab("Theoretical Quantiles") +
   ylab("Sample Quantiles")
+# Math scores mean and median compare
 summary_star <- star_involved %>%
   group_by(g1tchid,g1classtype,g1classsize,g1schid,g1surban) %>%
   dplyr::summarize(mean = mean(g1tmathss, na.rm = TRUE), 
@@ -273,7 +277,7 @@ summary_star <- star_involved %>%
 summary_star_long <- summary_star %>%
   gather(key = "Statistic", value = "Score", mean, median)
 
-# Create the plot using density lines
+# Hist plot with density lines - mean and median
 mean_median_compare <- ggplot(summary_star_long, aes(x = Score, color = Statistic, group = Statistic)) +
   geom_density() +
   facet_wrap(~ g1classtype) +
@@ -284,8 +288,8 @@ mean_median_compare <- ggplot(summary_star_long, aes(x = Score, color = Statisti
         plot.title = element_text(size = 14, face = "bold", hjust = 0.5)) +
   scale_color_brewer(palette = "Set1", name = "Measure")
 
-# Print the plot
 print(mean_median_compare)
+# Univariate descriptive analysis cont
 # Categorical variables
 long_data <- star_involved %>%
   dplyr::select(gender, g1surban, g1freelunch,g1classtype) %>%
@@ -299,7 +303,7 @@ urbanity_data <- long_data %>% filter(Attribute == "g1surban")
 freelunch_data <- long_data %>% filter(Attribute == "g1freelunch")
 classtype_data <- long_data %>% filter(Attribute == "g1classtype")
 
-# Create pie chart for Gender Distribution with percentage labels
+# Pie chart for Gender distribution
 gender_pie_chart <- ggplot(gender_data, aes(x = 1, y = Proportion, fill = Value)) +
   geom_bar(stat = "identity", width = 1) +
   coord_polar(theta = "y") +
@@ -309,7 +313,7 @@ gender_pie_chart <- ggplot(gender_data, aes(x = 1, y = Proportion, fill = Value)
   theme(legend.position = "right", plot.title = element_text(hjust = 0.5))
 
 
-# Create pie chart for Urbanicity Distribution with percentage labels
+# Pie chart for Urbanicity distribution
 urbanity_pie_chart <- ggplot(urbanity_data, aes(x = 1, y = Proportion, fill = Value)) +
   geom_bar(stat = "identity", width = 1) +
   coord_polar(theta = "y") +
@@ -318,7 +322,7 @@ urbanity_pie_chart <- ggplot(urbanity_data, aes(x = 1, y = Proportion, fill = Va
   theme_void() +
   theme(legend.position = "right", plot.title = element_text(hjust = 0.5))
 
-# Create pie chart for Free Lunch Distribution with percentage labels
+# Pie chart for Free Lunch distribution
 freelunch_pie_chart <- ggplot(freelunch_data, aes(x = 1, y = Proportion, fill = Value)) +
   geom_bar(stat = "identity", width = 1) +
   coord_polar(theta = "y") +
@@ -327,7 +331,7 @@ freelunch_pie_chart <- ggplot(freelunch_data, aes(x = 1, y = Proportion, fill = 
   theme_void() +
   theme(legend.position = "right", plot.title = element_text(hjust = 0.5))
 
-# Create pie chart for Class Type Distribution with percentage labels
+# Pie chart for Class Type distribution
 classtype_pie_chart <- ggplot(classtype_data, aes(x = 1, y = Proportion, fill = Value)) +
   geom_bar(stat = "identity", width = 1) +
   coord_polar(theta = "y") +
@@ -369,7 +373,6 @@ line_plot <- ggplot(summary_school_star, aes(x = factor(g1schid), y = median, gr
   theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())+
   theme(plot.title = element_text(hjust = 0.5))
 
-# Display the plot
 print(line_plot)
 ## Interaction plot distinguishing math scores from school and class types
 class_colors <- rainbow(length(unique(star_involved$g1classtype)))
@@ -378,6 +381,7 @@ school_colors <- rainbow(length(unique(star_involved$g1schid)))
 interaction.plot(summary_star$g1classtype, summary_star$g1schid, summary_star$median, 
                  col = class_colors[star_involved$g1classtype],
                  cex.lab = 1.5, ylab = "Math score", xlab = 'Class Type', main = "Class type-school interaction plot")
+# Multivariate descriptive analysis cont
 # Urbanicity
 urban_box <- ggplot(data = summary_school_star) +
   geom_boxplot(mapping = aes(x = g1surban, y = median, fill = g1surban)) +
@@ -421,7 +425,6 @@ lunch_box <- ggplot(data = star_involved_filtered) +
         legend.position = "none")
 
 plot_grid(urban_box, race_box, lunch_box, ncol=3)
-
 # Main effect plot of urban, race and free-lunch
 par(mfrow = c(1, 3), mar = c(2, 2, 2, 1))
 
@@ -465,7 +468,7 @@ anova_table_customized <- anova_table_customized %>%
     heading.subtitle.font.size = 12  # Adjusts subtitle font size
   ) %>%
   tab_style(
-    style = cell_text(size = 10),  # Adjusts the text size for table body
+    style = cell_text(size = 10),  # Adjuststext size for table body
     locations = cells_body(columns = everything())
   ) %>%
   tab_style(
@@ -491,14 +494,11 @@ summary_model <- summary(model_mix_anova)
 # Extract fixed effects coefficients
 fixed_effects <- summary_model$coefficients
 
-# Convert fixed effects to a data frame
 fixed_effects_df <- as.data.frame(fixed_effects)
 
-# Round the numbers
 fixed_effects_df <- round(fixed_effects_df, 2)
 fixed_effects_df <- cbind(rownames(fixed_effects_df),fixed_effects_df)
 
-# Add a title to the table
 fixed_effects_table <- gt(fixed_effects_df) %>%
   tab_header(
     title = "Summary of Fixed Effects Coefficients of Mixed-effect Model"
@@ -538,9 +538,10 @@ causal_plot_1 <- ggplot(effect_data_1, aes(x = predictor, y = coefficient)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 print(causal_plot_1)
+# Model diagnostics
 par(mfrow = c(2, 2))
-# Check for homoscedasticity by Residuals vs Fitted plot
 
+# Check for homoscedasticity by Residuals vs Fitted plot
 plot(predict(model_mix_anova), residuals(model_mix_anova), 
      xlab = "Fitted values", ylab = "Residuals", 
      main = "Residuals vs Fitted")
@@ -557,7 +558,7 @@ random_effects_named <- as.numeric(random_effects)
 qqnorm(random_effects_named, main = "Normal Q-Q Plot of random effects")
 qqline(random_effects_named, col = "red")
 
-# calculate correlation of residuals and random effects
+# Calculate correlation of residuals and random effects
 random_effects <- ranef(model_mix_anova)$g1schid
 random_effects_new <- cbind(id = rownames(random_effects), x = random_effects$`(Intercept)`)
 
@@ -573,9 +574,8 @@ random_effects_school <- as.numeric(random_effects_school)
 # Calculate correlation
 correlation <- cor(random_effects_school, residuals_school)
 
-# Print correlation coefficient
 print(correlation)
-# model 2
+# Model 2
 model.2 <- lmer(median ~ g1classtype + (1 | g1schid) + black_ratio + g1surban + free_lunch_ratio, data = summary_star)
 
 var_comp <- as.data.frame(VarCorr(model.2))
@@ -590,14 +590,11 @@ summary_model <- summary(model.2)
 # Extract fixed effects coefficients
 fixed_effects <- summary_model$coefficients
 
-# Convert fixed effects to a data frame
 fixed_effects_df <- as.data.frame(fixed_effects)
 
-# Round the numbers
 fixed_effects_df <- round(fixed_effects_df, 2)
 fixed_effects_df <-cbind(rownames(fixed_effects_df),fixed_effects_df)
 
-# Add a title to the table
 fixed_effects_table <- gt(fixed_effects_df) %>%
   tab_header(
     title = "Summary of Fixed Effects Coefficients of Model 2"
@@ -613,7 +610,7 @@ fixed_effects_table <- gt(fixed_effects_df) %>%
   ) %>%
   
   print(fixed_effects_table)
-# Multicollinearity
+# Multicollinearity test
 vif_result <- vif(model.2)
 vif_result_table <- data.frame(
   Variable = c("g1classtype", "black_ratio", "g1surban", "free_lunch_ratio"),
@@ -782,7 +779,6 @@ coefficients_1 <- c(-12.35, -12.63)  # Coefficient estimates
 std_errors_1 <- c(2.32, 2.41)     # Standard errors
 predictor_names_1 <- c("Regular", "Regular_Aide")
 
-# Create a data frame for model 1
 effect_data_1 <- data.frame(predictor = predictor_names_1, 
                             coefficient = coefficients_1,
                             std_error = std_errors_1)
@@ -792,15 +788,13 @@ coefficients_3 <- c(-11.68, -11.75)  # Coefficient estimates
 std_errors_3 <- c(2.25, 2.34)     # Standard errors
 predictor_names_3 <- c("Regular", "Regular_Aide")
 
-# Create a data frame for model 3
 effect_data_3 <- data.frame(predictor = predictor_names_3, 
                             coefficient = coefficients_3,
                             std_error = std_errors_3)
 
-# Combine data for plots 1 and 3
 combined_data_1_3 <- rbind(cbind(effect_data_1, model = "Model 1 (Origin Data)"), cbind(effect_data_3, model = "Model 3 (Imputed Data)"))
 
-# Create the combined causal effect plot for models 1 and 3
+# Combined causal effect plot for models 1 and 3
 combined_plot_1_3 <- ggplot(combined_data_1_3, aes(x = predictor, y = coefficient, fill = model)) +
   geom_bar(stat = "identity", position = position_dodge(width = 0.7), width = 0.3) +
   geom_errorbar(aes(ymin = coefficient - std_error, ymax = coefficient + std_error), 
@@ -817,7 +811,6 @@ coefficients_2 <- c(-9.43, -9.6, -8.665, 3.23, 6.19, 7.95, -25.245)  # Coefficie
 std_errors_2 <- c(3.007, 3.073, 10.336, 9.33, 10.38, 11.48, 9.554)     # Standard errors
 predictor_names_2 <- c("Regular", "Regular_Aide", "Black_Ratio", "Suburban","Rural","Urban", "Free_Lunch_Ratio")
 
-# Create a data frame for model 2
 effect_data_2 <- data.frame(predictor = predictor_names_2, 
                             coefficient = coefficients_2,
                             std_error = std_errors_2)
@@ -827,15 +820,13 @@ coefficients_4 <- c(-9, -9.42, -9.02, 3.9, 6.28, 8.03, -23.51)  # Coefficient es
 std_errors_4 <- c(2.92, 2.98, 9.89, 8.91, 9.9, 10.95, 9.21)     # Standard errors
 predictor_names_4 <- c("Regular", "Regular_Aide", "Black_Ratio", "Suburban","Rural","Urban", "Free_Lunch_Ratio")
 
-# Create a data frame for model 4
 effect_data_4 <- data.frame(predictor = predictor_names_4, 
                             coefficient = coefficients_4,
                             std_error = std_errors_4)
 
-# Combine data for plots 2 and 4
 combined_data_2_4 <- rbind(cbind(effect_data_2, model = "Model 2 (Origin Data)"), cbind(effect_data_4, model = "Model 4 (Imputed Data)"))
 
-# Create the combined causal effect plot for models 2 and 4
+# Combine causal effect plot for models 2 and 4
 combined_plot_2_4 <- ggplot(combined_data_2_4, aes(x = predictor, y = coefficient, fill = model)) +
   geom_bar(stat = "identity", position = position_dodge(width = 0.5), width = 0.5) +
   geom_errorbar(aes(ymin = coefficient - std_error, ymax = coefficient + std_error), 
@@ -887,12 +878,10 @@ fixed_effects_table <- gt(fixed_effects_df) %>%
 model.6 <- lmer(g1tmathss ~ g1classtype + (1 | g1schid) + race + g1surban + g1freelunch, data = star_involved)
 
 # Calculate the proportion of variability due to schools
-# Extract variance components
 var_comp <- as.data.frame(VarCorr(model.6))
 school_var <- var_comp[1, "vcov"]  # Variance for schools
 residual_var <- attr(VarCorr(model.6), "sc")^2  # Residual variance
 
-# Calculate the proportion of variability due to variability between schools
 school_var_prop <- school_var / (school_var + residual_var)
 
 summary_model <- summary(model.6)
@@ -924,15 +913,13 @@ coefficients_5 <- c(-13.32, -10.87)  # Coefficient estimates
 std_errors_5 <- c(1.18, 1.21)     # Standard errors
 predictor_names_5 <- c("Regular", "Regular_Aide") 
 
-# Create a data frame for model 5
 effect_data_5 <- data.frame(predictor = predictor_names_5, 
                             coefficient = coefficients_5,
                             std_error = std_errors_5)
 
-# Combine data for plots 1 and 5
 combined_data_1_5 <- rbind(cbind(effect_data_1, model = "Model 1 (Aggregated Data)"), cbind(effect_data_5, model = "Model 5 (Unaggregated Data)"))
 
-# Create the combined causal effect plot for models 1 and 5
+# Combined causal effect plot for models 1 and 5
 combined_plot_1_5 <- ggplot(combined_data_1_5, aes(x = predictor, y = coefficient, fill = model)) +
   geom_bar(stat = "identity", position = position_dodge(width = 0.7), width = 0.3) +
   geom_errorbar(aes(ymin = coefficient - std_error, ymax = coefficient + std_error), 
@@ -943,8 +930,6 @@ combined_plot_1_5 <- ggplot(combined_data_1_5, aes(x = predictor, y = coefficien
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   scale_fill_manual(values = c("Model 1 (Aggregated Data)" = "skyblue", "Model 5 (Unaggregated Data)" = "pink"))
 
-# Display the combined plot for models 1 and 3
 print(combined_plot_1_5)
 # BIC (Bayesian Information Criterion) to compare model
 BIC(model_mix_anova, model.2)
-sessionInfo()
