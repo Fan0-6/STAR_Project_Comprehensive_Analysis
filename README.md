@@ -21,9 +21,9 @@ A sensitivity analysis evaluates the impact of different imputation and aggregat
 The findings presented in this repository contribute valuable perspectives on how class size and school environment impact student academic performance, offering pointed evaluations for future improvement of the STAR Project.
 
 ## Repository Structure
-- `RMD scripts/`: Code to compile the study report, documentation of methodology, and findings and outputs from the scripts, including figures and tables..
-- `R scripts/`: pure codes.
-- `README.md`: Overview and guide to the repository.
+- `RMD_scripts/`: Contains the R Markdown files used to generate the comprehensive report detailing the methodology, findings, and visualizations such as charts and tables derived from the analysis.
+- `R_scripts/`: Holds the standalone R scripts with the core code for the analysis.
+- `README.md`: Overview and guide to the repository.Provides a summary of the repository's contents and instructions for navigation and use.
 
 ## Usage
 To replicate the analysis, follow the instructions in the `scripts/` directory.
