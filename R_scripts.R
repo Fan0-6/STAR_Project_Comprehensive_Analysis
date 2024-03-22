@@ -559,23 +559,7 @@ random_effects_named <- as.numeric(random_effects)
 qqnorm(random_effects_named, main = "Normal Q-Q Plot of random effects")
 qqline(random_effects_named, col = "red")
 
-# Calculate correlation of residuals and random effects
-random_effects <- ranef(model_mix_anova)$g1schid
-random_effects_new <- cbind(id = rownames(random_effects), x = random_effects$`(Intercept)`)
 
-
-residuals <- residuals(model_mix_anova)
-residuals_aggregated <- aggregate(residuals, by = list(summary_star$g1schid), FUN = mean)
-
-# Extract aggregated residuals and random effects
-residuals_school <- residuals_aggregated$x
-random_effects_school <- random_effects_new[, "x"]
-random_effects_school <- as.numeric(random_effects_school)
-
-# Calculate correlation
-correlation <- cor(random_effects_school, residuals_school)
-
-print(correlation)
 # Model 2
 model.2 <- lmer(median ~ g1classtype + (1 | g1schid) + black_ratio + g1surban + free_lunch_ratio, data = summary_star)
 
