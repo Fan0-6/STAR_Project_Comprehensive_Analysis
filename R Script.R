@@ -18,6 +18,7 @@ library(cowplot)
 library(DT)
 library(lme4)
 library(lmerTest)
+
 # Import data and select relative columns
 data <- read_sav("dataverse_files/STAR_Students.sav")
 which(colnames(data) == "g1schid")
