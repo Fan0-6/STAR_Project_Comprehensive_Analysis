@@ -3,7 +3,7 @@
 ## Overview
 This repository contains an extensive analysis of first-grade math scores from students involved in Project STAR, providing a critical review of the project's design and execution. The analysis identifies key limitations, including strict class size definitions, challenges in maintaining intervention consistency, ineffective randomization procedures, and inadequate control for confounding variables. These elements yield significant insights into the potential constraints of the study's findings.
 
-## Caveats and Heterogeneity
+## Caveats
 The caveats section delves into missing data and heterogeneity, where biases associated with underrepresented minority groups are examined. Despite their small numbers, the decision to implement median imputation for math scores was made to address these biases. Furthermore, heterogeneity analysis exposes patterns linked to race, urbanicity, and free-lunch status, which inform adjustments to subsequent modeling efforts.
 
 ## Descriptive Analysis
