@@ -23,6 +23,7 @@ The findings presented in this repository contribute valuable perspectives on ho
 ## Repository Structure
 - `RMD_scripts/`: Contains the R Markdown files used to generate the comprehensive report detailing the methodology, findings, and visualizations such as charts and tables derived from the analysis.
 - `R_scripts/`: Holds the standalone R scripts with the core code for the analysis.
+- `Report/`: HTML files generated from R Markdown scripts can be viewed by navigating to htmlpreview.github.io. Simply paste the following link into the provided input box to render the file: https://github.com/Fan0-6/STAR_Project_Comprehensive_Analysis/blob/main/Report.html
 - `README.md`: Overview and guide to the repository.Provides a summary of the repository's contents and instructions for navigation and use.
 
 ## Usage
